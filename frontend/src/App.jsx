@@ -1,6 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 import ReactMarkdown from "react-markdown";
+import "./App.css";
 
 const API_BASE = "http://127.0.0.1:8000";
 
@@ -90,119 +91,209 @@ export default function App() {
     }
   }
 
+  async function downloadResume() {
+    if (!tailored?.tailored_resume_markdown) return;
+
+    try {
+      const res = await axios.post(
+        `${API_BASE}/download_resume`,
+        { markdown: tailored.tailored_resume_markdown },
+        { responseType: "blob" }
+      );
+
+      const blob = new Blob([res.data], {
+        type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+      });
+
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tailored_resume.docx";
+      a.click();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Download failed");
+      console.error(err);
+    }
+  }
+
   return (
-    <div style={{ maxWidth: 1000, margin: "30px auto", fontFamily: "Arial" }}>
-      <h2>Resume ATS + Tailor (Gemini)</h2>
+    <div className="app-container">
+      <header className="app-header">
+        <h1 className="app-title">Resume ATS + Tailor</h1>
+        <p className="app-subtitle">Powered by Gemini AI</p>
+      </header>
 
-      <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8 }}>
-        <h3>1) Upload Resume</h3>
-        <input
-          type="file"
-          accept=".pdf,.docx"
-          onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
-        />
-        <button onClick={parseResume} style={{ marginLeft: 10 }}>
-          Parse Resume
-        </button>
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">1. Upload Resume</h2>
+        </div>
+        <div className="card-content">
+          <div className="form-group">
+            <div className="file-input-wrapper">
+              <input
+                type="file"
+                id="resume-file"
+                className="file-input"
+                accept=".pdf,.docx"
+                onChange={(e) => setResumeFile(e.target.files?.[0] || null)}
+              />
+              <label htmlFor="resume-file" className="file-input-label">
+                📎 Choose Resume File
+              </label>
+            </div>
+            <button onClick={parseResume} className="btn btn-primary">
+              📄 Parse Resume
+            </button>
+          </div>
 
-        <div style={{ marginTop: 12 }}>
-          <textarea
-            rows={8}
-            value={resumeText}
-            onChange={(e) => setResumeText(e.target.value)}
-            placeholder="Resume text appears here after parsing."
-            style={{ width: "100%" }}
-          />
+          <div className="form-group">
+            <label className="form-label">Resume Text:</label>
+            <textarea
+              rows={8}
+              value={resumeText}
+              onChange={(e) => setResumeText(e.target.value)}
+              placeholder="Resume text appears here after parsing..."
+              className="textarea"
+            />
+          </div>
         </div>
       </div>
 
-      <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginTop: 16 }}>
-        <h3>2) Job Description</h3>
-        <textarea
-          rows={10}
-          value={jobDescription}
-          onChange={(e) => setJobDescription(e.target.value)}
-          placeholder="Paste job description here..."
-          style={{ width: "100%" }}
-        />
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">2. Job Description</h2>
+        </div>
+        <div className="card-content">
+          <div className="form-group">
+            <label className="form-label">Paste Job Description:</label>
+            <textarea
+              rows={10}
+              value={jobDescription}
+              onChange={(e) => setJobDescription(e.target.value)}
+              placeholder="Paste the job description here..."
+              className="textarea"
+            />
+          </div>
+        </div>
       </div>
 
-      <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginTop: 16 }}>
-        <h3>3) Gemini Options</h3>
+      <div className="card">
+        <div className="card-header">
+          <h2 className="card-title">3. Gemini Options</h2>
+        </div>
+        <div className="card-content">
+          <div className="form-group">
+            <label className="form-label">Model:</label>
+            <input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder="gemini-2.5-flash"
+              className="input-field"
+              style={{ width: "300px" }}
+            />
+          </div>
 
-        <label>Model: </label>
-        <input
-          value={model}
-          onChange={(e) => setModel(e.target.value)}
-          style={{ width: 250 }}
-          placeholder="gemini-1.5-flash"
-        />
+          <div className="checkbox-wrapper">
+            <input
+              type="checkbox"
+              id="strict-mode"
+              className="checkbox-input"
+              checked={strictMode}
+              onChange={(e) => setStrictMode(e.target.checked)}
+            />
+            <label htmlFor="strict-mode" className="checkbox-label">
+              Strict mode (no invented skills)
+            </label>
+          </div>
 
-        <label style={{ marginLeft: 12 }}>
-          <input
-            type="checkbox"
-            checked={strictMode}
-            onChange={(e) => setStrictMode(e.target.checked)}
-          />
-          Strict mode (no invented skills)
-        </label>
-
-        <div style={{ marginTop: 12 }}>
-          <button onClick={getATSScore}>Get ATS Score</button>
-          <button onClick={tailorResume} style={{ marginLeft: 10 }}>
-            Tailor Resume
-          </button>
-
-          {loading && <span style={{ marginLeft: 12 }}>Working...</span>}
+          <div className="btn-group" style={{ marginTop: "1.5rem" }}>
+            <button onClick={getATSScore} className="btn btn-secondary">
+              📊 Get ATS Score
+            </button>
+            <button onClick={tailorResume} className="btn btn-primary">
+              🎯 Tailor Resume
+            </button>
+            {loading && <span className="loading">⏳ Processing...</span>}
+          </div>
         </div>
       </div>
 
       {atsResult && (
-        <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginTop: 16 }}>
-          <h3>ATS Result</h3>
-          <p><b>ATS Score:</b> {atsResult.ats_score}/100</p>
-          <p><b>Keyword Match:</b> {atsResult.keyword_match_score}/100</p>
-
-          <div style={{ display: "flex", gap: 20 }}>
-            <div style={{ flex: 1 }}>
-              <h4>Matches</h4>
-              <ul>
-                {atsResult.matches?.slice(0, 30).map((x, i) => <li key={i}>{x}</li>)}
-              </ul>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">📊 ATS Analysis Results</h2>
+          </div>
+          <div className="card-content">
+            <div className="score-display">
+              <div className="score-item">
+                <span className="score-value">{atsResult.ats_score}/100</span>
+                <span className="score-label">ATS Score</span>
+              </div>
+              <div className="score-item">
+                <span className="score-value">{atsResult.keyword_match_score}/100</span>
+                <span className="score-label">Keyword Match</span>
+              </div>
             </div>
 
-            <div style={{ flex: 1 }}>
-              <h4>Missing</h4>
-              <ul>
-                {atsResult.missing?.slice(0, 30).map((x, i) => <li key={i}>{x}</li>)}
-              </ul>
+            <div className="keyword-grid">
+              <div className="keyword-section">
+                <h3 className="keyword-title">✅ Matches</h3>
+                <ul className="keyword-list">
+                  {(atsResult.matches?.slice(0, 30) || []).map((match, i) => (
+                    <li key={i} className="keyword-item">{match}</li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="keyword-section">
+                <h3 className="keyword-title">❌ Missing</h3>
+                <ul className="keyword-list">
+                  {(atsResult.missing?.slice(0, 30) || []).map((missing, i) => (
+                    <li key={i} className="keyword-item">{missing}</li>
+                  ))}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       )}
 
       {tailored && (
-        <div style={{ padding: 12, border: "1px solid #ddd", borderRadius: 8, marginTop: 16 }}>
-          <h3>Tailored Resume</h3>
-          <ReactMarkdown>{tailored.tailored_resume_markdown || ""}</ReactMarkdown>
+        <div className="card">
+          <div className="card-header">
+            <h2 className="card-title">✨ Tailored Resume</h2>
+          </div>
+          <div className="card-content">
+            <div className="tailored-content">
+              <ReactMarkdown>{tailored.tailored_resume_markdown || ""}</ReactMarkdown>
+            </div>
 
-          <h4 style={{ marginTop: 20 }}>Change Log</h4>
-          <ul>
-            {(tailored.change_log || []).map((c, i) => (
-              <li key={i}>
-                <b>{c.section}:</b> {c.change}
-                <br />
-                <i>{c.reason}</i>
-              </li>
-            ))}
-          </ul>
+            <button onClick={downloadResume} className="btn btn-success" style={{ marginTop: "1.5rem" }}>
+              📥 Download Tailored Resume (DOCX)
+            </button>
 
-          <h4>Missing skills recommended to learn</h4>
-          <ul>
-            {(tailored.missing_skills_recommended_to_learn || []).map((s, i) => (
-              <li key={i}>{s}</li>
-            ))}
-          </ul>
+            <div className="changelog-section">
+              <h3 className="changelog-title">📝 Change Log</h3>
+              <ul style={{ listStyle: "none", padding: 0 }}>
+                {(tailored.change_log || []).map((change, i) => (
+                  <li key={i} className="changelog-item">
+                    <strong>{change.section}:</strong> {change.change}
+                    <span className="changelog-reason">{change.reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="skills-section">
+              <h3 className="skills-title">🎯 Missing Skills Recommended to Learn</h3>
+              <div className="skills-list">
+                {(tailored.missing_skills_recommended_to_learn || []).map((skill, i) => (
+                  <span key={i} className="skill-tag">{skill}</span>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

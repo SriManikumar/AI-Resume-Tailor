@@ -2,6 +2,9 @@ from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 from dotenv import load_dotenv
 load_dotenv()
+from fastapi.responses import StreamingResponse
+from docx_export import markdown_to_docx
+from io import BytesIO
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -20,7 +23,7 @@ app = FastAPI()
 # Allow React dev server
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=["http://localhost:5173", "http://localhost:5174", "http://localhost:5175"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -84,3 +87,20 @@ def tailor_resume(req: TailorRequest):
     )
     print("Tailor result:", result)
     return result
+
+@app.post("/download_resume")
+def download_resume(payload: dict):
+    markdown = payload.get("markdown")
+
+    if not markdown:
+        return {"error": "Missing markdown"}
+
+    docx_bytes = markdown_to_docx(markdown)
+
+    return StreamingResponse(
+        BytesIO(docx_bytes),
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={
+            "Content-Disposition": "attachment; filename=tailored_resume.docx"
+        }
+    )
